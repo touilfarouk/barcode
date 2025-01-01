@@ -49,20 +49,14 @@
       }
 
       try {
-        // Check for specific format support dynamically
-        const supported = ('BarcodeDetector' in window) &&
-          (await BarcodeDetector.getSupportedFormats()).includes('qr_code');
-
-        if (!supported) {
-          error.textContent = "QR Code detection is not supported on this browser.";
+        // Get all supported formats
+        const supportedFormats = await BarcodeDetector.getSupportedFormats();
+        if (supportedFormats.length === 0) {
+          error.textContent = "No barcode formats are supported in this browser.";
           return;
         }
 
-        // List of supported barcode formats
-        const supportedFormats = [
-          "code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"
-        ];
-
+        // Create BarcodeDetector with all supported formats
         const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
 
         // Access the device's camera
