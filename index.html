@@ -41,48 +41,62 @@
     const output = document.getElementById("output");
     const error = document.getElementById("error");
 
-    // Check if Barcode Detector API is supported
-    if (!('BarcodeDetector' in window)) {
-      error.textContent = "Barcode Detector API is not supported in this browser.";
-    } else {
-      // List of supported barcode formats
-      const supportedFormats = [
-        "code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"
-      ];
+    async function initializeBarcodeDetection() {
+      // Check if Barcode Detector API is supported
+      if (!('BarcodeDetector' in window)) {
+        error.textContent = "Barcode Detector API is not supported in this browser.";
+        return;
+      }
 
-      const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
+      try {
+        // Check for specific format support dynamically
+        const supported = ('BarcodeDetector' in window) &&
+          (await BarcodeDetector.getSupportedFormats()).includes('qr_code');
 
-      // Access the device's camera
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
-        .then((stream) => {
-          video.srcObject = stream;
+        if (!supported) {
+          error.textContent = "QR Code detection is not supported on this browser.";
+          return;
+        }
 
-          video.addEventListener("play", () => {
-            detectBarcodes();
-          });
-        })
-        .catch((err) => {
-          console.error("Camera access error:", err);
-          error.textContent = "Error accessing camera: " + err.message;
+        // List of supported barcode formats
+        const supportedFormats = [
+          "code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"
+        ];
+
+        const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
+
+        // Access the device's camera
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        video.srcObject = stream;
+
+        video.addEventListener("play", () => {
+          detectBarcodes(barcodeDetector);
         });
-
-      // Function to detect barcodes
-      function detectBarcodes() {
-        barcodeDetector.detect(video)
-          .then((barcodes) => {
-            if (barcodes.length > 0) {
-              output.textContent = `Detected barcode: ${barcodes[0].rawValue} (Type: ${barcodes[0].format})`;
-            } else {
-              output.textContent = "No barcode detected.";
-            }
-            requestAnimationFrame(detectBarcodes);
-          })
-          .catch((err) => {
-            console.error("Barcode detection error:", err);
-            error.textContent = "Detection error: " + err.message;
-          });
+      } catch (err) {
+        console.error("Initialization error:", err);
+        error.textContent = "Error initializing Barcode Detector: " + err.message;
       }
     }
+
+    // Function to detect barcodes
+    async function detectBarcodes(barcodeDetector) {
+      try {
+        const barcodes = await barcodeDetector.detect(video);
+        if (barcodes.length > 0) {
+          output.textContent = `Detected barcode: ${barcodes[0].rawValue} (Type: ${barcodes[0].format})`;
+        } else {
+          output.textContent = "No barcode detected.";
+        }
+      } catch (err) {
+        console.error("Barcode detection error:", err);
+        error.textContent = "Detection error: " + err.message;
+      } finally {
+        requestAnimationFrame(() => detectBarcodes(barcodeDetector));
+      }
+    }
+
+    // Start the Barcode Detection process
+    initializeBarcodeDetection();
   </script>
 </body>
 </html>
