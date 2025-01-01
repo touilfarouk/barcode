@@ -1,12 +1,85 @@
 <!DOCTYPE html>
-<html lang="">
-  <head>
-    <meta charset="utf-8">
-    <title></title>
-  </head>
-  <body>
-    <header></header>
-    <main></main>
-    <footer></footer>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#317EFB"/>
+  <title>Barcode Detection PWA</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+    }
+    video {
+      width: 100%;
+      max-width: 500px;
+    }
+    #output {
+      margin-top: 20px;
+      font-size: 1.2em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Barcode Detection PWA</h1>
+  <p>Detect barcodes using your camera!</p>
+  <video id="video" autoplay></video>
+  <div id="output">No barcode detected.</div>
+
+  <script>
+    const video = document.getElementById("video");
+    const output = document.getElementById("output");
+
+    // Check for Barcode Detector API support
+    if (!('BarcodeDetector' in window)) {
+      output.textContent = "Barcode Detector is not supported by this browser.";
+    } else {
+      const supportedFormats = ["code_128", "qr_code", "ean_13"];
+      const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
+
+      // Get camera stream
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+        .then((stream) => {
+          video.srcObject = stream;
+
+          video.addEventListener("play", () => {
+            detectBarcodes();
+          });
+        })
+        .catch((err) => {
+          console.error("Error accessing camera:", err);
+          output.textContent = "Error accessing camera.";
+        });
+
+      // Detect barcodes in the video feed
+      function detectBarcodes() {
+        barcodeDetector.detect(video)
+          .then((barcodes) => {
+            if (barcodes.length > 0) {
+              output.textContent = `Detected barcode: ${barcodes[0].rawValue}`;
+            } else {
+              output.textContent = "No barcode detected.";
+            }
+
+            requestAnimationFrame(detectBarcodes);
+          })
+          .catch((err) => {
+            console.error("Barcode detection failed:", err);
+            output.textContent = "Error detecting barcodes.";
+          });
+      }
+    }
+  </script>
+  <!--
+  git status
+git add .
+git commit -m "Initial commit"
+git branch -M main
+git remote remove origin
+git remote add origin https://github.com/touilfarouk/barcode.git
+git push -u origin main
+-->
+</body>
 </html>
