@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#317EFB"/>
-  <title>Barcode Detection PWA</title>
+  <title>Enhanced Barcode Detection PWA</title>
   <link rel="manifest" href="manifest.json">
   <style>
     body {
@@ -15,31 +15,44 @@
     video {
       width: 100%;
       max-width: 500px;
+      border: 2px solid #ccc;
+      border-radius: 8px;
     }
     #output {
       margin-top: 20px;
       font-size: 1.2em;
+      color: #333;
+    }
+    #error {
+      margin-top: 10px;
+      color: red;
     }
   </style>
 </head>
 <body>
-  <h1>Barcode Detection PWA</h1>
-  <p>Detect barcodes using your camera!</p>
-  <video id="video" autoplay></video>
-  <div id="output">No barcode detected.</div>
+  <h1>Enhanced Barcode Detection PWA</h1>
+  <p>Detect various types of barcodes using your camera!</p>
+  <video id="video" autoplay muted></video>
+  <div id="output">No barcode detected yet.</div>
+  <div id="error"></div>
 
   <script>
     const video = document.getElementById("video");
     const output = document.getElementById("output");
+    const error = document.getElementById("error");
 
-    // Check for Barcode Detector API support
+    // Check if Barcode Detector API is supported
     if (!('BarcodeDetector' in window)) {
-      output.textContent = "Barcode Detector is not supported by this browser.";
+      error.textContent = "Barcode Detector API is not supported in this browser.";
     } else {
-      const supportedFormats = ["code_128", "qr_code", "ean_13"];
+      // List of supported barcode formats
+      const supportedFormats = [
+        "code_128", "code_39", "ean_13", "ean_8", "upc_a", "upc_e", "qr_code"
+      ];
+
       const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
 
-      // Get camera stream
+      // Access the device's camera
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
         .then((stream) => {
           video.srcObject = stream;
@@ -49,29 +62,31 @@
           });
         })
         .catch((err) => {
-          console.error("Error accessing camera:", err);
-          output.textContent = "Error accessing camera.";
+          console.error("Camera access error:", err);
+          error.textContent = "Error accessing camera: " + err.message;
         });
 
-      // Detect barcodes in the video feed
+      // Function to detect barcodes
       function detectBarcodes() {
         barcodeDetector.detect(video)
           .then((barcodes) => {
             if (barcodes.length > 0) {
-              output.textContent = `Detected barcode: ${barcodes[0].rawValue}`;
+              output.textContent = `Detected barcode: ${barcodes[0].rawValue} (Type: ${barcodes[0].format})`;
             } else {
               output.textContent = "No barcode detected.";
             }
-
             requestAnimationFrame(detectBarcodes);
           })
           .catch((err) => {
-            console.error("Barcode detection failed:", err);
-            output.textContent = "Error detecting barcodes.";
+            console.error("Barcode detection error:", err);
+            error.textContent = "Detection error: " + err.message;
           });
       }
     }
   </script>
+</body>
+</html>
+
   <!--
   git status
 git add .
@@ -81,5 +96,4 @@ git remote remove origin
 git remote add origin https://github.com/touilfarouk/barcode.git
 git push -u origin main
 -->
-</body>
-</html>
+
