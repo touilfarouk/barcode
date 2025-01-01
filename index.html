@@ -3,9 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#317EFB"/>
-  <title>Enhanced Barcode Detection PWA</title>
-  <link rel="manifest" href="manifest.json">
+  <title>Optimized Barcode Detection</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -14,7 +12,7 @@
     }
     video {
       width: 100%;
-      max-width: 500px;
+      max-width: 600px;
       border: 2px solid #ccc;
       border-radius: 8px;
     }
@@ -27,57 +25,70 @@
       margin-top: 10px;
       color: red;
     }
+    #loading {
+      display: none;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
-  <h1> Barcode Detection PWA</h1>
-  <p>Detect various types of barcodes using your camera!</p>
+  <h1>Barcode Detection Application</h1>
+  <p>Detect barcodes using your camera!</p>
   <video id="video" autoplay muted></video>
   <div id="output">No barcode detected yet.</div>
   <div id="error"></div>
+  <div id="loading">Initializing...</div>
 
   <script>
     const video = document.getElementById("video");
     const output = document.getElementById("output");
     const error = document.getElementById("error");
+    const loading = document.getElementById("loading");
 
     async function initializeBarcodeDetection() {
-      // Check if Barcode Detector API is supported
+      loading.style.display = "block";
+      error.textContent = "";
+      output.textContent = "Initializing barcode detection...";
+
       if (!('BarcodeDetector' in window)) {
         error.textContent = "Barcode Detector API is not supported in this browser.";
+        loading.style.display = "none";
         return;
       }
 
       try {
-        // Get all supported formats
         const supportedFormats = await BarcodeDetector.getSupportedFormats();
         if (supportedFormats.length === 0) {
           error.textContent = "No barcode formats are supported in this browser.";
+          loading.style.display = "none";
           return;
         }
 
-        // Create BarcodeDetector with all supported formats
         const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
 
-        // Access the device's camera
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
         video.srcObject = stream;
 
         video.addEventListener("play", () => {
+          loading.style.display = "none";
           detectBarcodes(barcodeDetector);
         });
       } catch (err) {
         console.error("Initialization error:", err);
         error.textContent = "Error initializing Barcode Detector: " + err.message;
+        loading.style.display = "none";
       }
     }
 
-    // Function to detect barcodes
     async function detectBarcodes(barcodeDetector) {
       try {
         const barcodes = await barcodeDetector.detect(video);
         if (barcodes.length > 0) {
-          output.textContent = `Detected barcode: ${barcodes[0].rawValue} (Type: ${barcodes[0].format})`;
+          let outputText = "Detected barcodes:\n";
+          barcodes.forEach(b => {
+            outputText += `Type: ${b.format}, Value: ${b.rawValue}\n`;
+          });
+          output.textContent = outputText;
         } else {
           output.textContent = "No barcode detected.";
         }
@@ -89,7 +100,6 @@
       }
     }
 
-    // Start the Barcode Detection process
     initializeBarcodeDetection();
   </script>
 </body>
