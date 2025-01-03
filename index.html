@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QR Code Scanner</title>
+  <title>ML5 Barcode Scanner</title>
   <meta name="theme-color" content="#000000">
   <link rel="manifest" href="/manifest.json">
   <style>
@@ -13,7 +13,7 @@
       padding: 20px;
     }
 
-    #barcode-detection-video {
+    #barcode-scanner-video {
       width: 100%;
       max-width: 400px;
       border: 1px solid #ccc;
@@ -36,17 +36,24 @@
 </head>
 <body>
 
-  <h1>QR Code Scanner</h1>
-  <p>Click the button below to launch the QR code scanner.</p>
-  
+  <h1>ML5 Barcode Scanner</h1>
+  <p>Click the button below to launch the barcode scanner.</p>
+
   <button onclick="launchBarcodeScanner()">Launch Barcode Scanner</button>
-  
-  <video id="barcode-detection-video" hidden></video>
+
+  <video id="barcode-scanner-video" hidden></video>
+  <div id="barcode-output"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ml5@2.3.0/dist/ml5.min.js"></script>
 
   <script>
+    let barcodeScanner;
+    let videoElement = document.getElementById('barcode-scanner-video');
+    let outputDiv = document.getElementById('barcode-output');
+
     function launchBarcodeScanner() {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.BarcodeDetector) {
-        alert("Your device does not support the Barcode Detection API. Try again on Chrome Desktop or Android");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Your device does not support camera access.");
       } else {
         startDetection();
       }
@@ -54,42 +61,36 @@
 
     async function startDetection() {
       // Start the device's camera
-      let video = document.getElementById('barcode-detection-video');
       let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-      video.srcObject = stream;
-      video.play();
+      videoElement.srcObject = stream;
+      videoElement.play();
 
-      // Detect QR codes (you can add other formats in the `formats` array)
-      let barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+      // Initialize the ml5 barcode scanner
+      barcodeScanner = ml5.barcodeDetector(videoElement, modelReady);
 
-      video.addEventListener('loadedmetadata', async function () {
-        let canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        let context = canvas.getContext('2d');
-
-        let checkForQrCode = async function () {
-          // Draw the current view from the camera on a canvas
-          context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-          // Detect barcode in the canvas
-          let barcodes = await barcodeDetector.detect(canvas);
-
-          if (barcodes.length > 0) {
-            let barcodeData = barcodes[0].rawValue;
-            alert("Detected QR code with the following content: " + barcodeData);
-            // Optionally, stop the camera and the detection after a successful scan
-            video.srcObject.getTracks().forEach(track => track.stop());
-          }
-
-          // Keep checking for QR codes
-          requestAnimationFrame(checkForQrCode);
-        };
-
-        checkForQrCode();
+      // Set up the video event to start scanning once the camera is ready
+      videoElement.addEventListener('loadedmetadata', () => {
+        detectBarcode();
       });
     }
-  </script>
 
+    function modelReady() {
+      console.log("ML5 Barcode model is ready!");
+    }
+
+    async function detectBarcode() {
+      // Continuously scan for barcodes
+      const results = await barcodeScanner.detect();
+      if (results && results.length > 0) {
+        const barcodeData = results[0].rawValue;
+        outputDiv.textContent = `Detected Barcode: ${barcodeData}`;
+        alert(`Detected Barcode: ${barcodeData}`);
+        // Optionally, stop the camera after detection
+        videoElement.srcObject.getTracks().forEach(track => track.stop());
+      }
+
+      requestAnimationFrame(detectBarcode); // Keep detecting the barcode
+    }
+  </script>
 </body>
 </html>
