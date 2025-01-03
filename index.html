@@ -45,6 +45,17 @@
   <div id="barcode-output"></div>
 
   <script src="https://cdn.jsdelivr.net/npm/ml5@2.3.0/dist/ml5.min.js"></script>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then((registration) => {
+        console.log('Service Worker registered:', registration);
+      })
+      .catch((error) => {
+        console.error('Service Worker registration failed:', error);
+      });
+  }
+</script>
 
   <script>
     let barcodeScanner;
