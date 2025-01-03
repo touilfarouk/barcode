@@ -3,115 +3,93 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Optimized Barcode Detection</title>
+  <title>QR Code Scanner</title>
+  <meta name="theme-color" content="#000000">
+  <link rel="manifest" href="/manifest.json">
   <style>
     body {
       font-family: Arial, sans-serif;
       text-align: center;
-      margin: 20px;
+      padding: 20px;
     }
-    video {
+
+    #barcode-detection-video {
       width: 100%;
-      max-width: 600px;
-      border: 2px solid #ccc;
-      border-radius: 8px;
+      max-width: 400px;
+      border: 1px solid #ccc;
     }
-    #output {
-      margin-top: 20px;
-      font-size: 1.2em;
-      color: #333;
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
     }
-    #error {
-      margin-top: 10px;
-      color: red;
-    }
-    #loading {
-      display: none;
-      margin-top: 20px;
+
+    button:hover {
+      background-color: #45a049;
     }
   </style>
 </head>
 <body>
-  <h1>Barcode Detection Application</h1>
-  <p>Detect barcodes using your camera!</p>
-  <video id="video" autoplay muted></video>
-  <div id="output">No barcode detected yet.</div>
-  <div id="error"></div>
-  <div id="loading">Initializing...</div>
+
+  <h1>QR Code Scanner</h1>
+  <p>Click the button below to launch the QR code scanner.</p>
+  
+  <button onclick="launchBarcodeScanner()">Launch Barcode Scanner</button>
+  
+  <video id="barcode-detection-video" hidden></video>
 
   <script>
-    const video = document.getElementById("video");
-    const output = document.getElementById("output");
-    const error = document.getElementById("error");
-    const loading = document.getElementById("loading");
-
-    async function initializeBarcodeDetection() {
-      loading.style.display = "block";
-      error.textContent = "";
-      output.textContent = "Initializing barcode detection...";
-
-      if (!('BarcodeDetector' in window)) {
-        error.textContent = "Barcode Detector API is not supported in this browser.";
-        loading.style.display = "none";
-        return;
-      }
-
-      try {
-        const supportedFormats = await BarcodeDetector.getSupportedFormats();
-        if (supportedFormats.length === 0) {
-          error.textContent = "No barcode formats are supported in this browser.";
-          loading.style.display = "none";
-          return;
-        }
-
-        const barcodeDetector = new BarcodeDetector({ formats: supportedFormats });
-
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        video.srcObject = stream;
-
-        video.addEventListener("play", () => {
-          loading.style.display = "none";
-          detectBarcodes(barcodeDetector);
-        });
-      } catch (err) {
-        console.error("Initialization error:", err);
-        error.textContent = "Error initializing Barcode Detector: " + err.message;
-        loading.style.display = "none";
+    function launchBarcodeScanner() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.BarcodeDetector) {
+        alert("Your device does not support the Barcode Detection API. Try again on Chrome Desktop or Android");
+      } else {
+        startDetection();
       }
     }
 
-    async function detectBarcodes(barcodeDetector) {
-      try {
-        const barcodes = await barcodeDetector.detect(video);
-        if (barcodes.length > 0) {
-          let outputText = "Detected barcodes:\n";
-          barcodes.forEach(b => {
-            outputText += `Type: ${b.format}, Value: ${b.rawValue}\n`;
-          });
-          output.textContent = outputText;
-        } else {
-          output.textContent = "No barcode detected.";
-        }
-      } catch (err) {
-        console.error("Barcode detection error:", err);
-        error.textContent = "Detection error: " + err.message;
-      } finally {
-        requestAnimationFrame(() => detectBarcodes(barcodeDetector));
-      }
-    }
+    async function startDetection() {
+      // Start the device's camera
+      let video = document.getElementById('barcode-detection-video');
+      let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+      video.srcObject = stream;
+      video.play();
 
-    initializeBarcodeDetection();
+      // Detect QR codes (you can add other formats in the `formats` array)
+      let barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+
+      video.addEventListener('loadedmetadata', async function () {
+        let canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        let context = canvas.getContext('2d');
+
+        let checkForQrCode = async function () {
+          // Draw the current view from the camera on a canvas
+          context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Detect barcode in the canvas
+          let barcodes = await barcodeDetector.detect(canvas);
+
+          if (barcodes.length > 0) {
+            let barcodeData = barcodes[0].rawValue;
+            alert("Detected QR code with the following content: " + barcodeData);
+            // Optionally, stop the camera and the detection after a successful scan
+            video.srcObject.getTracks().forEach(track => track.stop());
+          }
+
+          // Keep checking for QR codes
+          requestAnimationFrame(checkForQrCode);
+        };
+
+        checkForQrCode();
+      });
+    }
   </script>
+
 </body>
 </html>
-
-  <!--
-  git status
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote remove origin
-git remote add origin https://github.com/touilfarouk/barcode.git
-git push -u origin main
--->
-
